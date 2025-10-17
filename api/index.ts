@@ -7,12 +7,16 @@ export default function handler(
   req: RequestWithMutableUrl,
   res: ServerResponse,
 ) {
-  const originalUrl = req.url;
-  const matchedPath = (req.headers["x-vercel-matched-path"] as string) || "";
-  const rewriteUrl = (req.headers["x-vercel-rewrite-url"] as string) || "";
-  console.log("[api/index]", { originalUrl, matchedPath, rewriteUrl, query: (req as any).query });
-  if (req.url) {
+  const currentUrl = req.url ?? "/";
+  const parsed = new URL(currentUrl, "http://localhost");
+  const pathParam = parsed.searchParams.get("path");
+  if (pathParam) {
+    parsed.searchParams.delete("path");
+    const search = parsed.searchParams.toString();
+    req.url = `/${pathParam}${search ? `?${search}` : ""}`;
+  } else if (req.url) {
     req.url = req.url.replace(/^\/api/, "") || "/";
   }
+
   return app(req as any, res as any);
 }
