@@ -7,6 +7,9 @@ const EVENTS = [
   "products/create",
   "products/update",
   "products/delete",
+  "store/redact",
+  "customers/redact",
+  "customers/data_request",
 ];
 
 export async function registerWebhooks(

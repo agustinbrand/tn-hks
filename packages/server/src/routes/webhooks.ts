@@ -37,4 +37,24 @@ router.post("/products-delete", async (req, res) => {
   res.json({ success: true });
 });
 
+router.post("/store-redact", async (req, res) => {
+  const storeId = Number.parseInt(String(req.body?.store_id ?? ""), 10);
+  logger.info({ storeId }, "Store redact webhook received");
+  res.json({ success: true });
+});
+
+router.post("/customers-redact", async (req, res) => {
+  const storeId = Number.parseInt(String(req.body?.store_id ?? ""), 10);
+  const customer = req.body?.data ?? null;
+  logger.info({ storeId, customer }, "Customers redact webhook received");
+  res.json({ success: true });
+});
+
+router.post("/customers-data_request", async (req, res) => {
+  const storeId = Number.parseInt(String(req.body?.store_id ?? ""), 10);
+  const customers = req.body?.data ?? null;
+  logger.info({ storeId, customers }, "Customers data request webhook received");
+  res.json({ success: true });
+});
+
 export default router;
