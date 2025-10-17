@@ -16,7 +16,14 @@ export type TiendanubeTokenResponse = {
   access_token: string;
   token_type: string;
   scope: string;
-  store_id: number;
+};
+
+export type TiendanubeCurrentStore = {
+  id: number;
+  name: string;
+  permanent_domain: string;
+  domain: string | null;
+  country: string;
 };
 
 export class TiendanubeClient {
@@ -79,6 +86,23 @@ export class TiendanubeClient {
   async deleteWebhook(id: number) {
     await this.http.delete(`/webhooks/${id}`);
   }
+}
+
+export async function fetchCurrentStore(
+  accessToken: string,
+): Promise<TiendanubeCurrentStore> {
+  const { data } = await axios.get<TiendanubeCurrentStore>(
+    "https://api.tiendanube.com/v1/me",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "User-Agent": "Codex Bundle App (codex@example.com)",
+      },
+      timeout: 15000,
+    },
+  );
+
+  return data;
 }
 
 export async function exchangeOAuthCode(params: {

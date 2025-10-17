@@ -9,6 +9,7 @@ import {
 import { migrate } from "../lib/db.js";
 import {
   exchangeOAuthCode,
+  fetchCurrentStore,
   TiendanubeClient,
 } from "../services/tiendanube-client.js";
 import { signSession, verifySession } from "../services/session.js";
@@ -78,11 +79,23 @@ router.get("/callback", async (req, res) => {
       "Token exchanged",
     );
 
-    const normalizedStoreId =
-      storeIdFromQuery ?? session?.storeId ?? token.store_id;
+    let normalizedStoreId =
+      storeIdFromQuery ?? session?.storeId ?? (token as any).store_id ?? null;
 
     if (!normalizedStoreId) {
-      logger.error({ storeIdFromQuery, token: token.store_id }, "Missing store id");
+      logger.info("Fetching current store from /me endpoint");
+      const currentStore = await fetchCurrentStore(token.access_token);
+      normalizedStoreId = currentStore.id;
+      if (!session) {
+        session = {
+          storeId: currentStore.id,
+          permanentDomain: currentStore.permanent_domain ?? currentStore.domain ?? "",
+        };
+      }
+    }
+
+    if (!normalizedStoreId) {
+      logger.error({ storeIdFromQuery }, "Missing store id after fallback");
       return res.status(400).send("Missing store information");
     }
 
