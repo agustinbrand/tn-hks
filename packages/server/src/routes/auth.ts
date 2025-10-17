@@ -137,7 +137,9 @@ router.get("/launch", async (req, res) => {
   const params = Object.fromEntries(
     Object.entries(req.query).map(([key, value]) => [key, String(value)]),
   );
-  if (!verifyLaunchSignature(params)) {
+  const isValid = verifyLaunchSignature(params);
+  logger.info({ params, isValid }, "Launch request received");
+  if (!isValid) {
     return res.status(401).json({ success: false, message: "Invalid signature" });
   }
 
