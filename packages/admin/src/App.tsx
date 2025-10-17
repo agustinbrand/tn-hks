@@ -19,12 +19,13 @@ export default function App() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!selectedProduct) return;
+    const productId = selectedProduct?.id;
+    if (!productId) return;
     async function fetchConfig() {
       setLoadingConfig(true);
       try {
         const api = await createApiClient();
-        const { data } = await api.get(`/bundles/${selectedProduct.id}`);
+        const { data } = await api.get(`/bundles/${productId}`);
         if (data?.data) {
           setConfig({
             ...defaultConfig,
