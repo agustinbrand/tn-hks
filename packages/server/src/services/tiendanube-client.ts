@@ -16,6 +16,7 @@ export type TiendanubeTokenResponse = {
   access_token: string;
   token_type: string;
   scope: string;
+  store_id: number;
 };
 
 export class TiendanubeClient {

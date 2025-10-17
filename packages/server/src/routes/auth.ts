@@ -49,60 +49,69 @@ router.get("/install", async (req, res) => {
 
 router.get("/callback", async (req, res) => {
   const { code, store_id: storeIdRaw, state } = req.query;
-  if (!code || !state) {
+  if (!code) {
     return res.status(400).send("Missing OAuth params");
   }
 
   logger.info({ state, storeIdRaw }, "OAuth callback received");
 
-  let session;
-  try {
-    session = verifySession(String(state));
-  } catch (err) {
-    logger.warn({ err }, "Invalid OAuth state");
-    return res.status(401).send("Invalid state");
+  let session: { storeId: number; permanentDomain: string } | null = null;
+  if (state) {
+    try {
+      session = verifySession(String(state));
+    } catch (err) {
+      logger.warn({ err }, "Invalid OAuth state");
+      session = null;
+    }
   }
 
   const storeIdFromQuery = storeIdRaw ? Number.parseInt(String(storeIdRaw), 10) : null;
-  const storeId = storeIdFromQuery ?? session.storeId;
-  if (!storeId || session.storeId !== storeId) {
-    return res.status(400).send("Store mismatch");
-  }
 
   try {
-    logger.info({ storeId }, "Running database migrations");
+    logger.info({ storeIdFromQuery, statePresent: Boolean(state) }, "Running database migrations");
     await migrate();
 
-    logger.info({ storeId }, "Exchanging OAuth code");
+    logger.info({ storeIdFromQuery }, "Exchanging OAuth code");
     const token = await exchangeOAuthCode({ code: String(code) });
+
+    const normalizedStoreId =
+      storeIdFromQuery ?? session?.storeId ?? token.store_id;
+
+    if (!normalizedStoreId) {
+      logger.error({ storeIdFromQuery, token: token.store_id }, "Missing store id");
+      return res.status(400).send("Missing store information");
+    }
+
     await saveToken({
-      storeId,
+      storeId: normalizedStoreId,
       accessToken: token.access_token,
       scope: token.scope,
     });
 
-    logger.info({ storeId }, "Fetching store info");
-    const client = new TiendanubeClient(storeId, token.access_token);
+    logger.info({ storeId: normalizedStoreId }, "Fetching store info");
+    const client = new TiendanubeClient(normalizedStoreId, token.access_token);
     const store = await client.getStore();
     await upsertStore({
-      store_id: storeId,
-      permanent_domain: session.permanentDomain,
+      store_id: normalizedStoreId,
+      permanent_domain:
+        session?.permanentDomain ?? store.permalink ?? store.domain ?? "",
       name: store.name,
       country: store.country,
     });
 
-    await ensureScriptTag(client, storeId);
-    await registerWebhooks(client, storeId);
+    await ensureScriptTag(client, normalizedStoreId);
+    await registerWebhooks(client, normalizedStoreId);
 
     const sessionToken = signSession({
-      storeId,
-      permanentDomain: session.permanentDomain,
+      storeId: normalizedStoreId,
+      permanentDomain:
+        session?.permanentDomain ?? store.permalink ?? store.domain ?? "",
     });
 
-    logger.info({ storeId }, "OAuth callback completed successfully");
+    logger.info({ storeId: normalizedStoreId }, "OAuth callback completed successfully");
     return res.redirect(`${env.APP_URL}/admin?session=${sessionToken}`);
   } catch (error) {
-    logger.error({ error, storeId }, "OAuth callback failure");
+    logger.error({ error, storeIdFromQuery, statePresent: Boolean(state) }, "OAuth callback failure");
     return res.status(500).send("Failed to install app. Check logs.");
   }
 });
