@@ -1,14 +1,13 @@
-import serverless from "serverless-http";
 import type { IncomingMessage, ServerResponse } from "http";
 
-let cachedHandler: ReturnType<typeof serverless> | null = null;
+let cachedApp: ((req: IncomingMessage, res: ServerResponse) => void) | null = null;
 
-async function resolveHandler() {
-  if (!cachedHandler) {
+async function resolveApp() {
+  if (!cachedApp) {
     const { default: app } = await import("../packages/server/src/app.js");
-    cachedHandler = serverless(app);
+    cachedApp = app as any;
   }
-  return cachedHandler;
+  return cachedApp;
 }
 
 export default async function vercelHandler(
@@ -28,8 +27,8 @@ export default async function vercelHandler(
     }
   }
   try {
-    const handler = await resolveHandler();
-    await handler(req as any, res as any);
+    const app = await resolveApp();
+    app(req as any, res as any);
   } catch (error) {
     console.error("[api/index] handler error", error);
     if (!res.headersSent) {
