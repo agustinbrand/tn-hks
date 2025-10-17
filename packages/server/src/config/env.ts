@@ -24,7 +24,12 @@ const databaseUrl =
   process.env.DATABASE_DATABASE_URL ??
   process.env.DATABASE_POSTGRES_URL ??
   process.env.DATABASE_POSTGRES_PRISMA_URL ??
-  process.env.DATABASE_POSTGRES_URL_NON_POOLING;
+  process.env.DATABASE_POSTGRES_URL_NON_POOLING ??
+  process.env.TN_DATABASE_URL ??
+  process.env.TN_DATABASE_DATABASE_URL ??
+  process.env.TN_POSTGRES_URL ??
+  process.env.TN_POSTGRES_PRISMA_URL ??
+  process.env.TN_POSTGRES_URL_NON_POOLING;
 
 if (!process.env.DATABASE_URL && databaseUrl) {
   process.env.DATABASE_URL = databaseUrl;
