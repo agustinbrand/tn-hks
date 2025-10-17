@@ -45,6 +45,8 @@ type BundleConfigResponse = {
   complementaries: ComplementaryProduct[];
 };
 
+export {};
+
 type StorefrontState = {
   config: BundleConfigResponse;
   basePrice: number;
@@ -734,7 +736,9 @@ async function addComplementaryFromMode(
     const productId = Number.parseInt(check.getAttribute("data-product") || "", 10);
     const itemType = "complementario";
     const compItem = check.closest(".comp-item") as HTMLElement | null;
-    const select = compItem?.querySelector<HTMLSelectElement>(".comp-variant-select");
+    const select = compItem
+      ? compItem.querySelector<HTMLSelectElement>(".comp-variant-select")
+      : null;
     const variant = getSelectedVariant(select);
     await addProductToCart(productId, variant, startIndex + i, totalItems, itemType);
   }
