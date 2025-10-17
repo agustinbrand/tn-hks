@@ -49,7 +49,7 @@ router.get("/install", async (req, res) => {
 
 router.get("/callback", async (req, res) => {
   const { code, store_id: storeIdRaw, state } = req.query;
-  if (!code || !storeIdRaw || !state) {
+  if (!code || !state) {
     return res.status(400).send("Missing OAuth params");
   }
 
@@ -61,7 +61,8 @@ router.get("/callback", async (req, res) => {
     return res.status(401).send("Invalid state");
   }
 
-  const storeId = Number.parseInt(String(storeIdRaw), 10);
+  const storeIdFromQuery = storeIdRaw ? Number.parseInt(String(storeIdRaw), 10) : null;
+  const storeId = storeIdFromQuery ?? session.storeId;
   if (!storeId || session.storeId !== storeId) {
     return res.status(400).send("Store mismatch");
   }
