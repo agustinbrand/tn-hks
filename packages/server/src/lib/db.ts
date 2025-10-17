@@ -7,6 +7,8 @@ const { Pool } = pkg;
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: 10,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 10000,
   ssl:
     env.NODE_ENV === "production"
       ? {
@@ -20,6 +22,7 @@ pool.on("error", (err: Error) => {
 });
 
 export async function migrate() {
+  logger.debug("Running database migrations");
   await pool.query(`
     create table if not exists stores (
       id serial primary key,
@@ -54,4 +57,5 @@ export async function migrate() {
       unique (store_id, product_id)
     );
   `);
+  logger.debug("Database migrations finished");
 }

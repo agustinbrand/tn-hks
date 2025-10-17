@@ -29,6 +29,7 @@ export class TiendanubeClient {
         "User-Agent": "Codex Bundle App (codex@example.com)",
         Authorization: `Bearer ${accessToken}`,
       },
+      timeout: 15000,
     });
   }
 
@@ -101,6 +102,7 @@ export async function exchangeOAuthCode(params: {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
+      timeout: 15000,
     },
   );
 
