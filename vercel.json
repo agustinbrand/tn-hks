@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/auth/(.*)", "destination": "/api/$1" },
+    { "source": "/webhooks/(.*)", "destination": "/api/$1" },
+    { "source": "/public/(.*)", "destination": "/api/$1" },
+    { "source": "/admin", "destination": "/api/admin" },
+    { "source": "/admin/(.*)", "destination": "/api/admin/$1" },
+    { "source": "/assets/(.*)", "destination": "/api/assets/$1" },
+    { "source": "/", "destination": "/api" }
+  ]
+}
