@@ -12,7 +12,7 @@ const envSchema = z.object({
   APP_URL: z.string().url(),
   APP_CLIENT_ID: z.string(),
   APP_CLIENT_SECRET: z.string(),
-  APP_SCOPES: z.string().default("read_products,write_orders,read_orders"),
+  APP_SCOPES: z.string().default("read_products,write_scripts"),
   APP_REDIRECT_URI: z.string().url(),
   APP_WEBHOOK_SECRET: z.string(),
   DATABASE_URL: z.string().url(),

@@ -1,3 +1,4 @@
+import axios from "axios";
 import env from "../config/env.js";
 import logger from "../lib/logger.js";
 import { TiendanubeClient } from "./tiendanube-client.js";
@@ -18,11 +19,26 @@ export async function ensureScriptTag(
   }
 
   const src = `${env.APP_URL}/public/bundle.js?store_id=${storeId}&v=${Date.now()}`;
-  const created = await client.createScriptTag({
-    src,
-    event: "onload",
-    where: "storefront",
-  });
-  logger.info({ storeId, scriptTagId: created.id }, "Script tag created");
-  return created;
+  try {
+    const created = await client.createScriptTag({
+      src,
+      event: "onload",
+      where: "storefront",
+    });
+    logger.info({ storeId, scriptTagId: created.id }, "Script tag created");
+    return created;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 403) {
+      logger.warn(
+        {
+          storeId,
+          status: error.response.status,
+          data: error.response.data,
+        },
+        "Missing write_scripts permission, skipping script tag creation",
+      );
+      return null;
+    }
+    throw error;
+  }
 }
