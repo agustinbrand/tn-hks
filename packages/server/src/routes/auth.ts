@@ -73,6 +73,10 @@ router.get("/callback", async (req, res) => {
 
     logger.info({ storeIdFromQuery }, "Exchanging OAuth code");
     const token = await exchangeOAuthCode({ code: String(code) });
+    logger.info(
+      { tokenKeys: Object.keys(token), tokenStoreId: token.store_id },
+      "Token exchanged",
+    );
 
     const normalizedStoreId =
       storeIdFromQuery ?? session?.storeId ?? token.store_id;
