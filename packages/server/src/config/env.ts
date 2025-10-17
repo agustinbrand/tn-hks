@@ -19,6 +19,17 @@ const envSchema = z.object({
   SESSION_JWT_SECRET: z.string().min(32),
 });
 
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  process.env.DATABASE_DATABASE_URL ??
+  process.env.DATABASE_POSTGRES_URL ??
+  process.env.DATABASE_POSTGRES_PRISMA_URL ??
+  process.env.DATABASE_POSTGRES_URL_NON_POOLING;
+
+if (!process.env.DATABASE_URL && databaseUrl) {
+  process.env.DATABASE_URL = databaseUrl;
+}
+
 const env = envSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
@@ -28,7 +39,7 @@ const env = envSchema.parse({
   APP_SCOPES: process.env.APP_SCOPES,
   APP_REDIRECT_URI: process.env.APP_REDIRECT_URI,
   APP_WEBHOOK_SECRET: process.env.APP_WEBHOOK_SECRET,
-  DATABASE_URL: process.env.DATABASE_URL,
+  DATABASE_URL: process.env.DATABASE_URL ?? databaseUrl,
   SESSION_JWT_SECRET: process.env.SESSION_JWT_SECRET,
 });
 
