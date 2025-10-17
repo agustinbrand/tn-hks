@@ -22,7 +22,7 @@ pool.on("error", (err: Error) => {
 });
 
 export async function migrate() {
-  logger.debug("Running database migrations");
+  logger.info("Running database migrations");
   await pool.query(`
     create table if not exists stores (
       id serial primary key,
@@ -57,5 +57,5 @@ export async function migrate() {
       unique (store_id, product_id)
     );
   `);
-  logger.debug("Database migrations finished");
+  logger.info("Database migrations finished");
 }
