@@ -91,18 +91,37 @@ export class TiendanubeClient {
 export async function fetchCurrentStore(
   accessToken: string,
 ): Promise<TiendanubeCurrentStore> {
-  const { data } = await axios.get<TiendanubeCurrentStore>(
-    "https://api.tiendanube.com/v1/me",
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "User-Agent": "Codex Bundle App (codex@example.com)",
+  try {
+    const { data } = await axios.get<TiendanubeCurrentStore>(
+      "https://api.tiendanube.com/v1/me",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "User-Agent": "Codex Bundle App (codex@example.com)",
+        },
+        timeout: 15000,
       },
-      timeout: 15000,
-    },
-  );
+    );
 
-  return data;
+    return data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      logger.warn("/me endpoint returned 404, falling back to /store");
+      const { data } = await axios.get<TiendanubeCurrentStore>(
+        "https://api.tiendanube.com/v1/store",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "User-Agent": "Codex Bundle App (codex@example.com)",
+          },
+          timeout: 15000,
+        },
+      );
+      return data;
+    }
+
+    throw error;
+  }
 }
 
 export async function exchangeOAuthCode(params: {
