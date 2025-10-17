@@ -15,7 +15,7 @@ export const pool = new Pool({
       : undefined,
 });
 
-pool.on("error", (err) => {
+pool.on("error", (err: Error) => {
   logger.error({ err }, "Postgres pool error");
 });
 
