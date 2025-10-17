@@ -1,0 +1,116 @@
+import { Router } from "express";
+import env from "../config/env.js";
+import logger from "../lib/logger.js";
+import {
+  getToken,
+  saveToken,
+  upsertStore,
+} from "../repositories/store-repository.js";
+import { migrate } from "../lib/db.js";
+import {
+  exchangeOAuthCode,
+  TiendanubeClient,
+} from "../services/tiendanube-client.js";
+import { signSession, verifySession } from "../services/session.js";
+import { ensureScriptTag } from "../services/script-tag-service.js";
+import { registerWebhooks } from "../services/webhook-service.js";
+import { verifyLaunchSignature } from "../services/signature.js";
+
+const router = Router();
+
+router.get("/install", async (req, res) => {
+  const storeId = Number.parseInt(String(req.query.store_id ?? ""), 10);
+  const permanentDomain = String(req.query.permanent_domain ?? "");
+
+  if (!storeId || !permanentDomain) {
+    return res.status(400).send("Missing store parameters");
+  }
+
+  const token = await getToken(storeId);
+  if (token) {
+    logger.info({ storeId }, "Store already installed, redirecting to admin");
+    const session = signSession({ storeId, permanentDomain });
+    return res.redirect(`${env.APP_URL}/admin?session=${session}`);
+  }
+
+  const state = signSession({ storeId, permanentDomain });
+
+  const authorizeUrl = new URL(
+    `https://www.tiendanube.com/apps/authorize/${env.APP_CLIENT_ID}`,
+  );
+  authorizeUrl.searchParams.set("client_id", env.APP_CLIENT_ID);
+  authorizeUrl.searchParams.set("scope", env.APP_SCOPES);
+  authorizeUrl.searchParams.set("redirect_uri", env.APP_REDIRECT_URI);
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("state", state);
+
+  return res.redirect(authorizeUrl.toString());
+});
+
+router.get("/callback", async (req, res) => {
+  const { code, store_id: storeIdRaw, state } = req.query;
+  if (!code || !storeIdRaw || !state) {
+    return res.status(400).send("Missing OAuth params");
+  }
+
+  let session;
+  try {
+    session = verifySession(String(state));
+  } catch (err) {
+    logger.warn({ err }, "Invalid OAuth state");
+    return res.status(401).send("Invalid state");
+  }
+
+  const storeId = Number.parseInt(String(storeIdRaw), 10);
+  if (!storeId || session.storeId !== storeId) {
+    return res.status(400).send("Store mismatch");
+  }
+
+  await migrate();
+
+  const token = await exchangeOAuthCode({ code: String(code) });
+  await saveToken({
+    storeId,
+    accessToken: token.access_token,
+    scope: token.scope,
+  });
+
+  const client = new TiendanubeClient(storeId, token.access_token);
+  const store = await client.getStore();
+  await upsertStore({
+    store_id: storeId,
+    permanent_domain: session.permanentDomain,
+    name: store.name,
+    country: store.country,
+  });
+
+  await ensureScriptTag(client, storeId);
+  await registerWebhooks(client, storeId);
+
+  const sessionToken = signSession({
+    storeId,
+    permanentDomain: session.permanentDomain,
+  });
+
+  return res.redirect(`${env.APP_URL}/admin?session=${sessionToken}`);
+});
+
+router.get("/launch", async (req, res) => {
+  const params = Object.fromEntries(
+    Object.entries(req.query).map(([key, value]) => [key, String(value)]),
+  );
+  if (!verifyLaunchSignature(params)) {
+    return res.status(401).json({ success: false, message: "Invalid signature" });
+  }
+
+  const storeId = Number.parseInt(params.store_id ?? "", 10);
+  const permanentDomain = params.permanent_domain;
+  if (!storeId || !permanentDomain) {
+    return res.status(400).json({ success: false, message: "Missing store data" });
+  }
+
+  const sessionToken = signSession({ storeId, permanentDomain });
+  res.json({ success: true, token: sessionToken });
+});
+
+export default router;
