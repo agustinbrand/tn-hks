@@ -53,6 +53,8 @@ router.get("/callback", async (req, res) => {
     return res.status(400).send("Missing OAuth params");
   }
 
+  logger.info({ state, storeIdRaw }, "OAuth callback received");
+
   let session;
   try {
     session = verifySession(String(state));
@@ -67,33 +69,42 @@ router.get("/callback", async (req, res) => {
     return res.status(400).send("Store mismatch");
   }
 
-  await migrate();
+  try {
+    logger.info({ storeId }, "Running database migrations");
+    await migrate();
 
-  const token = await exchangeOAuthCode({ code: String(code) });
-  await saveToken({
-    storeId,
-    accessToken: token.access_token,
-    scope: token.scope,
-  });
+    logger.info({ storeId }, "Exchanging OAuth code");
+    const token = await exchangeOAuthCode({ code: String(code) });
+    await saveToken({
+      storeId,
+      accessToken: token.access_token,
+      scope: token.scope,
+    });
 
-  const client = new TiendanubeClient(storeId, token.access_token);
-  const store = await client.getStore();
-  await upsertStore({
-    store_id: storeId,
-    permanent_domain: session.permanentDomain,
-    name: store.name,
-    country: store.country,
-  });
+    logger.info({ storeId }, "Fetching store info");
+    const client = new TiendanubeClient(storeId, token.access_token);
+    const store = await client.getStore();
+    await upsertStore({
+      store_id: storeId,
+      permanent_domain: session.permanentDomain,
+      name: store.name,
+      country: store.country,
+    });
 
-  await ensureScriptTag(client, storeId);
-  await registerWebhooks(client, storeId);
+    await ensureScriptTag(client, storeId);
+    await registerWebhooks(client, storeId);
 
-  const sessionToken = signSession({
-    storeId,
-    permanentDomain: session.permanentDomain,
-  });
+    const sessionToken = signSession({
+      storeId,
+      permanentDomain: session.permanentDomain,
+    });
 
-  return res.redirect(`${env.APP_URL}/admin?session=${sessionToken}`);
+    logger.info({ storeId }, "OAuth callback completed successfully");
+    return res.redirect(`${env.APP_URL}/admin?session=${sessionToken}`);
+  } catch (error) {
+    logger.error({ error, storeId }, "OAuth callback failure");
+    return res.status(500).send("Failed to install app. Check logs.");
+  }
 });
 
 router.get("/launch", async (req, res) => {
