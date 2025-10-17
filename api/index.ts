@@ -15,6 +15,7 @@ export default async function vercelHandler(
   req: IncomingMessage,
   res: ServerResponse,
 ) {
+  console.log("[api/index] incoming", req.url);
   if (req.url) {
     const url = new URL(req.url, "http://localhost");
     const pathParam = url.searchParams.get("path");
