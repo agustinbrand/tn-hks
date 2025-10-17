@@ -110,7 +110,7 @@ export async function exchangeOAuthCode(params: {
   clientId?: string;
   clientSecret?: string;
   redirectUri?: string;
-}): Promise<TiendanubeTokenResponse> {
+}): Promise<TiendanubeTokenResponse & { store_id?: number }> {
   const { code, clientId, clientSecret, redirectUri } = params;
   const body = qs.stringify({
     client_id: clientId ?? env.APP_CLIENT_ID,
