@@ -47,6 +47,10 @@ app.use("/api", adminRouter);
 app.use("/public", publicRouter);
 app.use("/webhooks", webhookRouter);
 
+app.get(["/", ""], (_req, res) => {
+  res.redirect("/admin");
+});
+
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const storefrontDist = path.join(dirname, "../../storefront/dist");
 app.use(
